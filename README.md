@@ -50,11 +50,11 @@ $ scm.py scm.scm < examples/fib90.scm
 $ time pypy /usr/local/bin/scm.py scm.scm < examples/nqueens.scm
 ((5 3 1 6 4 2) (4 1 5 2 6 3) (3 6 2 5 1 4) (2 4 6 1 3 5))
 
-real	0m3.601s
-user	0m3.468s
-sys	0m0.122s
+real	0m3.704s
+user	0m3.560s
+sys	0m0.136s
 $ scm.py scm.scm < examples/dynamic-wind-example.scm 
-(connect talk1 disconnect connect talk2 disconnect)None
+(connect talk1 disconnect connect talk2 disconnect)
 $ scm.py scm.scm < examples/yin-yang-puzzle.scm
 
 *
@@ -74,6 +74,15 @@ Press the interrupt key (e.g. Control-C) to stop the yin-yang puzzle.
 
 ## The implemented language
 
-This Scheme is compatible with
+The language implemented here is the same as
 [little-scheme-in-python](https://github.com/nukata/little-scheme-in-python)
 except for `load` and `symbol->string`, which are not implemented.
+
+Additionally, it also has `globals`, which returns a list of keys of
+the global environment.
+
+```
+(globals)
+=> (globals = < * - + symbol? eof-object? read newline display apply call/cc list
+ not null? pair? eqv? eq? cons cdr car)
+```
