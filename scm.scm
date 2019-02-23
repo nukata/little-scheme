@@ -1,4 +1,4 @@
-;; A meta-circular little Scheme v0.2 H31.02.22 by SUZUKI Hisao
+;; A meta-circular little Scheme v0.2 H31.02.23 by SUZUKI Hisao
 
 ;; Intrinsic:    ($Intrinsic . function)
 ;; Continuation: ($Continuation . function)
@@ -193,14 +193,13 @@
 ;; Repeat read-eval-print until End-of-File.
 (define read-eval-print-loop
   (lambda ()
-    ;; (display '>) (display #\space)
     ((lambda (input)
        (if (not (eof-object? input))
            (begin
              ((lambda (result)
                 (if (not (eq? result None))
                     (begin
-                      (display '=>) (display #\space) (display result)
+                      (display "=> ") (display result)
                       (newline))))
               (global-eval input))
              (read-eval-print-loop))))
