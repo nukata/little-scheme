@@ -1,4 +1,4 @@
-;; A meta-circular little Scheme v0.2 H31.02.23 by SUZUKI Hisao
+;; A meta-circular little Scheme v0.3 H31.03.11 by SUZUKI Hisao
 
 ;; Intrinsic:    ($Intrinsic . function)
 ;; Continuation: ($Continuation . function)
@@ -23,10 +23,10 @@
                 (set! CDR (cdr op))
               (display (list 'Unknown-op op CAR CDR)))))))))
 
-(define 1st car)
-(define 2nd (lambda (x) (car (cdr x))))
-(define 3rd (lambda (x) (car (cdr (cdr x)))))
-(define None (set! 1st 1st))
+(define fst car)
+(define snd (lambda (x) (car (cdr x))))
+(define trd (lambda (x) (car (cdr (cdr x)))))
+(define None (set! fst fst))
 
 ;; Return a list of keys of the global environment.
 (define globals
@@ -43,28 +43,28 @@
              (_ name (cons '$Intrinsic fun))))
 
 (define Global-Env
-  (_ (_i 'display (lambda (x) (display (1st x))))
+  (_ (_i 'display (lambda (x) (display (fst x))))
      (_ (_i 'newline (lambda (x) (newline)))
         (_ (_i 'read (lambda (x) (read)))
-           (_ (_i 'eof-object? (lambda (x) (eof-object? (1st x))))
-              (_ (_i 'symbol? (lambda (x) (symbol? (1st x))))
-                 (_ (_i '+ (lambda (x) (+ (1st x) (2nd x))))
-                    (_ (_i '- (lambda (x) (- (1st x) (2nd x))))
-                       (_ (_i '* (lambda (x) (* (1st x) (2nd x))))
-                          (_ (_i '< (lambda (x) (< (1st x) (2nd x))))
-                             (_ (_i '= (lambda (x) (= (1st x) (2nd x))))
+           (_ (_i 'eof-object? (lambda (x) (eof-object? (fst x))))
+              (_ (_i 'symbol? (lambda (x) (symbol? (fst x))))
+                 (_ (_i '+ (lambda (x) (+ (fst x) (snd x))))
+                    (_ (_i '- (lambda (x) (- (fst x) (snd x))))
+                       (_ (_i '* (lambda (x) (* (fst x) (snd x))))
+                          (_ (_i '< (lambda (x) (< (fst x) (snd x))))
+                             (_ (_i '= (lambda (x) (= (fst x) (snd x))))
                                 (_ (_i 'globals globals)
                                    '()))))))))))))
 
 (set! Global-Env
-      (_ (_i 'car (lambda (x) (car (1st x))))
-         (_ (_i 'cdr (lambda (x) (cdr (1st x))))
-            (_ (_i 'cons (lambda (x) (cons (1st x) (2nd x))))
-               (_ (_i 'eq? (lambda (x) (eq? (1st x) (2nd x))))
-                  (_ (_i 'eqv? (lambda (x) (eqv? (1st x) (2nd x))))
-                     (_ (_i 'pair? (lambda (x) (pair? (1st x))))
-                        (_ (_i 'null? (lambda (x) (null? (1st x))))
-                           (_ (_i 'not (lambda (x) (not (1st x))))
+      (_ (_i 'car (lambda (x) (car (fst x))))
+         (_ (_i 'cdr (lambda (x) (cdr (fst x))))
+            (_ (_i 'cons (lambda (x) (cons (fst x) (snd x))))
+               (_ (_i 'eq? (lambda (x) (eq? (fst x) (snd x))))
+                  (_ (_i 'eqv? (lambda (x) (eqv? (fst x) (snd x))))
+                     (_ (_i 'pair? (lambda (x) (pair? (fst x))))
+                        (_ (_i 'null? (lambda (x) (null? (fst x))))
+                           (_ (_i 'not (lambda (x) (not (fst x))))
                               (_ (_i 'list (lambda (x) x))
                                  (_ (_ 'call/cc 'call/cc)
                                     (_ (_ 'apply 'apply)
@@ -76,31 +76,31 @@
     (if (pair? exp)
         ((lambda (kar kdr)
            (if (eq? kar 'quote)         ; (quote e)
-               (k (1st kdr))
+               (k (fst kdr))
              (if (eq? kar 'if)          ; (if e1 e2) or (if e1 e2 e3)
                  (if (null? (cdr (cdr kdr)))
-                     (evaluate (1st kdr) env
+                     (evaluate (fst kdr) env
                                (lambda (x)
                                  (if x
-                                     (evaluate (2nd kdr) env k)
+                                     (evaluate (snd kdr) env k)
                                    (evaluate None env k))))
-                   (evaluate (1st kdr) env
+                   (evaluate (fst kdr) env
                              (lambda (x)
                                (if x
-                                   (evaluate (2nd kdr) env k)
-                                 (evaluate (3rd kdr) env k)))))
+                                   (evaluate (snd kdr) env k)
+                                 (evaluate (trd kdr) env k)))))
                (if (eq? kar 'begin)     ; (begin e...)
-                   (eval-sequentially kdr env k None)
+                   (eval-sequentially kdr env k)
                  (if (eq? kar 'lambda)  ; (lambda (v...) e...)
                      (k (list '$Closure (car kdr) (cdr kdr) env))
                    (if (eq? kar 'define) ; (define v e)
-                       (evaluate (2nd kdr) env
+                       (evaluate (snd kdr) env
                                  (lambda (x)
-                                   (k (define-var (1st kdr) x env))))
+                                   (k (define-var (fst kdr) x env))))
                      (if (eq? kar 'set!) ; (set! v e)
-                         (evaluate (2nd kdr) env
+                         (evaluate (snd kdr) env
                                    (lambda (x)
-                                     (k (set-var (look-for-pair (1st kdr) env)
+                                     (k (set-var (look-for-pair (fst kdr) env)
                                                  x))))
                        (if (eq? kar '$Intrinsic)
                            (k exp)
@@ -124,31 +124,30 @@
 (define apply-fun
   (lambda (fun arg k)
     (if (eq? fun 'call/cc)
-        (apply-fun (1st arg) (list (cons '$Continuation k)) k)
+        (apply-fun (fst arg) (list (cons '$Continuation k)) k)
       (if (eq? fun 'apply)
-          (apply-fun (1st arg) (2nd arg) k)
+          (apply-fun (fst arg) (snd arg) k)
         ((lambda (kar kdr)
            (if (eq? kar '$Intrinsic)
                (k (kdr arg))
              (if (eq? kar '$Continuation)
-                 (kdr (1st arg))
+                 (kdr (fst arg))
                (if (eq? kar '$Closure)
-                   (eval-sequentially (2nd kdr) ; body
-                                      (prepend-defs-to-env (1st kdr) ; params
+                   (eval-sequentially (snd kdr) ; body
+                                      (prepend-defs-to-env (fst kdr) ; params
                                                            arg
-                                                           (3rd kdr)) ; env
-                                      k
-                                      None)
+                                                           (trd kdr)) ; env
+                                      k)
                  (display (list 'Unknown-fun fun arg))))))
          (car fun)
          (cdr fun))))))
 
 (define eval-sequentially
-  (lambda (explist env k result)
-    (if (null? explist)
-        (k result)
-      (evaluate (car explist) env
-                (lambda (x) (eval-sequentially (cdr explist) env k x))))))
+  (lambda (explist env k)
+    (evaluate (car explist) env
+              (if (null? (cdr explist))
+                  k
+                (lambda (x) (eval-sequentially (cdr explist) env k))))))
 
 (define evlis
   (lambda (arg env k)
@@ -208,7 +207,7 @@
 ;; (read-eval-print-loop)
 (global-eval '(begin
 ;; ----------------------------------------------------------------------
-;; A meta-circular little Scheme v0.2 H31.02.23 by SUZUKI Hisao
+;; A meta-circular little Scheme v0.3 H31.03.11 by SUZUKI Hisao
 
 ;; Intrinsic:    ($Intrinsic . function)
 ;; Continuation: ($Continuation . function)
@@ -233,10 +232,10 @@
                 (set! CDR (cdr op))
               (display (list 'Unknown-op op CAR CDR)))))))))
 
-(define 1st car)
-(define 2nd (lambda (x) (car (cdr x))))
-(define 3rd (lambda (x) (car (cdr (cdr x)))))
-(define None (set! 1st 1st))
+(define fst car)
+(define snd (lambda (x) (car (cdr x))))
+(define trd (lambda (x) (car (cdr (cdr x)))))
+(define None (set! fst fst))
 
 ;; Return a list of keys of the global environment.
 (define globals
@@ -253,28 +252,28 @@
              (_ name (cons '$Intrinsic fun))))
 
 (define Global-Env
-  (_ (_i 'display (lambda (x) (display (1st x))))
+  (_ (_i 'display (lambda (x) (display (fst x))))
      (_ (_i 'newline (lambda (x) (newline)))
         (_ (_i 'read (lambda (x) (read)))
-           (_ (_i 'eof-object? (lambda (x) (eof-object? (1st x))))
-              (_ (_i 'symbol? (lambda (x) (symbol? (1st x))))
-                 (_ (_i '+ (lambda (x) (+ (1st x) (2nd x))))
-                    (_ (_i '- (lambda (x) (- (1st x) (2nd x))))
-                       (_ (_i '* (lambda (x) (* (1st x) (2nd x))))
-                          (_ (_i '< (lambda (x) (< (1st x) (2nd x))))
-                             (_ (_i '= (lambda (x) (= (1st x) (2nd x))))
+           (_ (_i 'eof-object? (lambda (x) (eof-object? (fst x))))
+              (_ (_i 'symbol? (lambda (x) (symbol? (fst x))))
+                 (_ (_i '+ (lambda (x) (+ (fst x) (snd x))))
+                    (_ (_i '- (lambda (x) (- (fst x) (snd x))))
+                       (_ (_i '* (lambda (x) (* (fst x) (snd x))))
+                          (_ (_i '< (lambda (x) (< (fst x) (snd x))))
+                             (_ (_i '= (lambda (x) (= (fst x) (snd x))))
                                 (_ (_i 'globals globals)
                                    '()))))))))))))
 
 (set! Global-Env
-      (_ (_i 'car (lambda (x) (car (1st x))))
-         (_ (_i 'cdr (lambda (x) (cdr (1st x))))
-            (_ (_i 'cons (lambda (x) (cons (1st x) (2nd x))))
-               (_ (_i 'eq? (lambda (x) (eq? (1st x) (2nd x))))
-                  (_ (_i 'eqv? (lambda (x) (eqv? (1st x) (2nd x))))
-                     (_ (_i 'pair? (lambda (x) (pair? (1st x))))
-                        (_ (_i 'null? (lambda (x) (null? (1st x))))
-                           (_ (_i 'not (lambda (x) (not (1st x))))
+      (_ (_i 'car (lambda (x) (car (fst x))))
+         (_ (_i 'cdr (lambda (x) (cdr (fst x))))
+            (_ (_i 'cons (lambda (x) (cons (fst x) (snd x))))
+               (_ (_i 'eq? (lambda (x) (eq? (fst x) (snd x))))
+                  (_ (_i 'eqv? (lambda (x) (eqv? (fst x) (snd x))))
+                     (_ (_i 'pair? (lambda (x) (pair? (fst x))))
+                        (_ (_i 'null? (lambda (x) (null? (fst x))))
+                           (_ (_i 'not (lambda (x) (not (fst x))))
                               (_ (_i 'list (lambda (x) x))
                                  (_ (_ 'call/cc 'call/cc)
                                     (_ (_ 'apply 'apply)
@@ -286,31 +285,31 @@
     (if (pair? exp)
         ((lambda (kar kdr)
            (if (eq? kar 'quote)         ; (quote e)
-               (k (1st kdr))
+               (k (fst kdr))
              (if (eq? kar 'if)          ; (if e1 e2) or (if e1 e2 e3)
                  (if (null? (cdr (cdr kdr)))
-                     (evaluate (1st kdr) env
+                     (evaluate (fst kdr) env
                                (lambda (x)
                                  (if x
-                                     (evaluate (2nd kdr) env k)
+                                     (evaluate (snd kdr) env k)
                                    (evaluate None env k))))
-                   (evaluate (1st kdr) env
+                   (evaluate (fst kdr) env
                              (lambda (x)
                                (if x
-                                   (evaluate (2nd kdr) env k)
-                                 (evaluate (3rd kdr) env k)))))
+                                   (evaluate (snd kdr) env k)
+                                 (evaluate (trd kdr) env k)))))
                (if (eq? kar 'begin)     ; (begin e...)
-                   (eval-sequentially kdr env k None)
+                   (eval-sequentially kdr env k)
                  (if (eq? kar 'lambda)  ; (lambda (v...) e...)
                      (k (list '$Closure (car kdr) (cdr kdr) env))
                    (if (eq? kar 'define) ; (define v e)
-                       (evaluate (2nd kdr) env
+                       (evaluate (snd kdr) env
                                  (lambda (x)
-                                   (k (define-var (1st kdr) x env))))
+                                   (k (define-var (fst kdr) x env))))
                      (if (eq? kar 'set!) ; (set! v e)
-                         (evaluate (2nd kdr) env
+                         (evaluate (snd kdr) env
                                    (lambda (x)
-                                     (k (set-var (look-for-pair (1st kdr) env)
+                                     (k (set-var (look-for-pair (fst kdr) env)
                                                  x))))
                        (if (eq? kar '$Intrinsic)
                            (k exp)
@@ -334,31 +333,30 @@
 (define apply-fun
   (lambda (fun arg k)
     (if (eq? fun 'call/cc)
-        (apply-fun (1st arg) (list (cons '$Continuation k)) k)
+        (apply-fun (fst arg) (list (cons '$Continuation k)) k)
       (if (eq? fun 'apply)
-          (apply-fun (1st arg) (2nd arg) k)
+          (apply-fun (fst arg) (snd arg) k)
         ((lambda (kar kdr)
            (if (eq? kar '$Intrinsic)
                (k (kdr arg))
              (if (eq? kar '$Continuation)
-                 (kdr (1st arg))
+                 (kdr (fst arg))
                (if (eq? kar '$Closure)
-                   (eval-sequentially (2nd kdr) ; body
-                                      (prepend-defs-to-env (1st kdr) ; params
+                   (eval-sequentially (snd kdr) ; body
+                                      (prepend-defs-to-env (fst kdr) ; params
                                                            arg
-                                                           (3rd kdr)) ; env
-                                      k
-                                      None)
+                                                           (trd kdr)) ; env
+                                      k)
                  (display (list 'Unknown-fun fun arg))))))
          (car fun)
          (cdr fun))))))
 
 (define eval-sequentially
-  (lambda (explist env k result)
-    (if (null? explist)
-        (k result)
-      (evaluate (car explist) env
-                (lambda (x) (eval-sequentially (cdr explist) env k x))))))
+  (lambda (explist env k)
+    (evaluate (car explist) env
+              (if (null? (cdr explist))
+                  k
+                (lambda (x) (eval-sequentially (cdr explist) env k))))))
 
 (define evlis
   (lambda (arg env k)

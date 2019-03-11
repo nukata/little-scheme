@@ -5,8 +5,11 @@ It implements the same language as
 [little-scheme-in-python](https://github.com/nukata/little-scheme-in-python)
 (`scm.py`) and runs on it.
 It also runs on other Schemes such as
+[little-scheme-in-go](https://github.com/nukata/little-scheme-in-go) and
 [guile](https://www.gnu.org/software/guile/).
+It will run on any R5RS Schemes.
 
+It is inspired by [Zick Standard Lisp](https://github.com/zick/ZickStandardLisp).
 
 ## How to use
 
@@ -25,7 +28,7 @@ $ scm.py scm.scm
 )
 => (1 2 3)
 +
-=> ($Intrinsic . #<(x):((+ (1st x) (2nd x))):#-0x7fffffffefa37ae5>)
+=> ($Intrinsic . #<(x):((+ (fst x) (snd x))):#-0x7fffffffefa062e5>)
 ```
 
 Press EOF (e.g. Control-D) to exit the session.
@@ -66,9 +69,9 @@ $ scm.py scm.scm < examples/fib90.scm
 $ time scm.py scm.scm < examples/nqueens.scm
 ((5 3 1 6 4 2) (4 1 5 2 6 3) (3 6 2 5 1 4) (2 4 6 1 3 5))
 
-real	1m48.412s
-user	1m47.835s
-sys	0m0.551s
+real	1m49.103s
+user	1m49.012s
+sys	0m0.055s
 $ scm.py scm.scm < examples/dynamic-wind-example.scm 
 (connect talk1 disconnect connect talk2 disconnect)
 $ scm.py scm.scm < examples/yin-yang-puzzle.scm
@@ -87,16 +90,22 @@ $ scm.py scm.scm < examples/yin-yang-puzzle.scm
 
 Press the interrupt key (e.g. Control-C) to stop the yin-yang puzzle.
 
-As you see the above, `python` is rather slow.
+As you see the above, `python` is rather slow to run '`scm.py scm.scm`'.
 You can use an alternative implementation [PyPy](https://pypy.org) instead.
 
 ```
 $ time pypy /usr/local/bin/scm.py scm.scm < examples/nqueens.scm 
 ((5 3 1 6 4 2) (4 1 5 2 6 3) (3 6 2 5 1 4) (2 4 6 1 3 5))
 
-real	0m3.611s
-user	0m3.478s
-sys	0m0.126s
+real	0m3.328s
+user	0m3.270s
+sys	0m0.051s
+$ time pypy3 /usr/local/bin/scm.py scm.scm < examples/nqueens.scm 
+((5 3 1 6 4 2) (4 1 5 2 6 3) (3 6 2 5 1 4) (2 4 6 1 3 5))
+
+real	0m3.544s
+user	0m3.481s
+sys	0m0.056s
 $ 
 ```
 
@@ -125,7 +134,7 @@ Being meta-circular, this interpreter is able to run itself recursively.
 ```Scheme
 ;; (read-eval-print-loop)
 (global-eval '(begin
-;; A meta-circular little Scheme v0.2 H31.02.23 by SUZUKI Hisao
+;; A meta-circular little Scheme v0.3 H31.03.11 by SUZUKI Hisao
 ...
 (read-eval-print-loop)
 ```
@@ -135,7 +144,7 @@ Being meta-circular, this interpreter is able to run itself recursively.
 ```Scheme
 ;; (read-eval-print-loop)
 (global-eval '(begin
-;; A meta-circular little Scheme v0.2 H31.02.23 by SUZUKI Hisao
+;; A meta-circular little Scheme v0.3 H31.03.11 by SUZUKI Hisao
 ...
 (read-eval-print-loop)
 ))
@@ -150,10 +159,10 @@ $ scm.py tower/scm-scm.scm
 (+ 5 6)
 => 11
 +
-=> ($Intrinsic $Closure (x) ((+ (1st x) (2nd x))) #<(op):((if (eq? op (quote car)
+=> ($Intrinsic $Closure (x) ((+ (fst x) (snd x))) #<(op):((if (eq? op (quote car)
 ) CAR (if (eq? op (quote cdr)) CDR (if (eq? (car op) (quote car)) (set! CAR (cdr 
 op)) (if (eq? (car op) (quote cdr)) (set! CDR (cdr op)) (display (list (quote Unk
-nown-op) op CAR CDR))))))):#0x1088e8d4>)
+nown-op) op CAR CDR))))))):#0x10fca9d4>)
 ```
 
 Note that the _intrinsic_ function `+` is now implemented by a _closure_
@@ -167,27 +176,27 @@ prohibitively _slowly_ as might be expected.
 $ time guile example/fib90.scm
 2880067194370816120
 
-real	0m0.024s
-user	0m0.013s
-sys	0m0.010s
+real	0m0.030s
+user	0m0.017s
+sys	0m0.013s
 $ time guile scm.scm < example/fib90.scm
 2880067194370816120
 
-real	0m0.025s
-user	0m0.014s
-sys	0m0.011s
+real	0m0.033s
+user	0m0.020s
+sys	0m0.014s
 $ time guile tower/scm-scm.scm < examples/fib90.scm
 2880067194370816120
 
-real	0m0.247s
-user	0m0.298s
-sys	0m0.039s
+real	0m0.280s
+user	0m0.293s
+sys	0m0.025s
 $ time guile tower/scm-scm-scm.scm < examples/fib90.scm
 2880067194370816120
 
-real	0m53.844s
-user	1m21.555s
-sys	0m5.245s
+real	0m52.806s
+user	1m0.438s
+sys	0m2.543s
 $ 
 ```
 
