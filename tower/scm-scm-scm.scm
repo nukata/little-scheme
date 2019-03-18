@@ -1,14 +1,13 @@
-;; A meta-circular little Scheme v0.3 H31.03.11 by SUZUKI Hisao
+;; A meta-circular little Scheme v1.0 H31.03.18 by SUZUKI Hisao
 
 ;; Intrinsic:    ($Intrinsic . function)
 ;; Continuation: ($Continuation . function)
 ;; Closure:      ($Closure params body env)
 
-;; (_ CAR CDR) returns a mutable cons-cell to construct an environment.
+;; (_ CAR CDR) returns a mutable cons-cell to construct environments.
 ;; (define x (_ 'a 'b))
 ;; (x 'car) => a
 ;; (x 'cdr) => b
-;; (x '(car . c)) => None; (x 'car) = c
 ;; (x '(cdr . c)) => None; (x 'cdr) = c
 (define _
   (lambda (CAR CDR)
@@ -17,11 +16,9 @@
           CAR
         (if (eq? op 'cdr)
             CDR
-          (if (eq? (car op) 'car)
-              (set! CAR (cdr op))
-            (if (eq? (car op) 'cdr)
-                (set! CDR (cdr op))
-              (display (list 'Unknown-op op CAR CDR)))))))))
+          (if (eq? (car op) 'cdr)
+              (set! CDR (cdr op))
+            (display (list 'Unknown-op op CAR CDR))))))))
 
 (define fst car)
 (define snd (lambda (x) (car (cdr x))))
@@ -37,9 +34,9 @@
                    (loop (env 'cdr)
                          (cons ((env 'car) 'car)
                                result)))))
-    (loop Global-Env '())))
+    (loop (Global-Env 'cdr) '())))      ; Take cdr to skip the marker.
 
-(define _i (lambda (name fun) 
+(define _i (lambda (name fun)
              (_ name (cons '$Intrinsic fun))))
 
 (define Global-Env
@@ -57,18 +54,19 @@
                                    '()))))))))))))
 
 (set! Global-Env
-      (_ (_i 'car (lambda (x) (car (fst x))))
-         (_ (_i 'cdr (lambda (x) (cdr (fst x))))
-            (_ (_i 'cons (lambda (x) (cons (fst x) (snd x))))
-               (_ (_i 'eq? (lambda (x) (eq? (fst x) (snd x))))
-                  (_ (_i 'eqv? (lambda (x) (eqv? (fst x) (snd x))))
-                     (_ (_i 'pair? (lambda (x) (pair? (fst x))))
-                        (_ (_i 'null? (lambda (x) (null? (fst x))))
-                           (_ (_i 'not (lambda (x) (not (fst x))))
-                              (_ (_i 'list (lambda (x) x))
-                                 (_ (_ 'call/cc 'call/cc)
-                                    (_ (_ 'apply 'apply)
-                                       Global-Env))))))))))))
+      (_ (_ '() '())                    ; marker of the frame top
+         (_ (_i 'car (lambda (x) (car (fst x))))
+            (_ (_i 'cdr (lambda (x) (cdr (fst x))))
+               (_ (_i 'cons (lambda (x) (cons (fst x) (snd x))))
+                  (_ (_i 'eq? (lambda (x) (eq? (fst x) (snd x))))
+                     (_ (_i 'eqv? (lambda (x) (eqv? (fst x) (snd x))))
+                        (_ (_i 'pair? (lambda (x) (pair? (fst x))))
+                           (_ (_i 'null? (lambda (x) (null? (fst x))))
+                              (_ (_i 'not (lambda (x) (not (fst x))))
+                                 (_ (_i 'list (lambda (x) x))
+                                    (_ (_ 'call/cc 'call/cc)
+                                       (_ (_ 'apply 'apply)
+                                          Global-Env)))))))))))))
 
 ;; Evaluate an expression with an environment and a continuation.
 (define evaluate
@@ -133,15 +131,18 @@
              (if (eq? kar '$Continuation)
                  (kdr (fst arg))
                (if (eq? kar '$Closure)
-                   (eval-sequentially (snd kdr) ; body
-                                      (prepend-defs-to-env (fst kdr) ; params
-                                                           arg
-                                                           (trd kdr)) ; env
-                                      k)
+                   (eval-sequentially
+                    (snd kdr)           ; body
+                    (_ (_ '() '())      ; marker of the frame top
+                       (prepend-defs-to-env (fst kdr) ; params
+                                            arg
+                                            (trd kdr))) ; env
+                    k)
                  (display (list 'Unknown-fun fun arg))))))
          (car fun)
          (cdr fun))))))
 
+;; Evaluate each element of list sequentially to yield the last result.
 (define eval-sequentially
   (lambda (explist env k)
     (evaluate (car explist) env
@@ -149,6 +150,8 @@
                   k
                 (lambda (x) (eval-sequentially (cdr explist) env k))))))
 
+;; Evaluate each element of list to construct a new list of the results.
+;; (evlis '((* 1 2) (* 3 4)) Global-Env list) => (list '(2 12)) => ((2 12))
 (define evlis
   (lambda (arg env k)
     (if (null? arg)
@@ -159,11 +162,13 @@
                          (lambda (tail)
                            (k (cons head tail)))))))))
 
-;; x = env; (deinfe-var 'a 1 x) => None; x = (_ (_ a 1) env)
+;; env = (_ (_ '() '()) x); (deinfe-var 'a 1 env) => None;
+;; env = (_ (_ '() '()) (_ (_ a 1) x))
 (define define-var
   (lambda (v e env)
-    (env (cons 'cdr (_ (env 'car) (env 'cdr))))
-    (env (cons 'car (_ v e)))))
+    (if (null? ((env 'car) 'car))
+        (env (cons 'cdr (_ (_ v e) (env 'cdr))))
+      (display (list 'Illegal-env v e ((env 'car) 'car))))))
 
 ;; x = (_ a 1); (set-var x 2) => None; x = (_ a 2)
 (define set-var (lambda (pair e)
@@ -206,18 +211,16 @@
 
 ;; (read-eval-print-loop)
 (global-eval '(begin
-;; ----------------------------------------------------------------------
-;; A meta-circular little Scheme v0.3 H31.03.11 by SUZUKI Hisao
+;; A meta-circular little Scheme v1.0 H31.03.18 by SUZUKI Hisao
 
 ;; Intrinsic:    ($Intrinsic . function)
 ;; Continuation: ($Continuation . function)
 ;; Closure:      ($Closure params body env)
 
-;; (_ CAR CDR) returns a mutable cons-cell to construct an environment.
+;; (_ CAR CDR) returns a mutable cons-cell to construct environments.
 ;; (define x (_ 'a 'b))
 ;; (x 'car) => a
 ;; (x 'cdr) => b
-;; (x '(car . c)) => None; (x 'car) = c
 ;; (x '(cdr . c)) => None; (x 'cdr) = c
 (define _
   (lambda (CAR CDR)
@@ -226,11 +229,9 @@
           CAR
         (if (eq? op 'cdr)
             CDR
-          (if (eq? (car op) 'car)
-              (set! CAR (cdr op))
-            (if (eq? (car op) 'cdr)
-                (set! CDR (cdr op))
-              (display (list 'Unknown-op op CAR CDR)))))))))
+          (if (eq? (car op) 'cdr)
+              (set! CDR (cdr op))
+            (display (list 'Unknown-op op CAR CDR))))))))
 
 (define fst car)
 (define snd (lambda (x) (car (cdr x))))
@@ -246,9 +247,9 @@
                    (loop (env 'cdr)
                          (cons ((env 'car) 'car)
                                result)))))
-    (loop Global-Env '())))
+    (loop (Global-Env 'cdr) '())))      ; Take cdr to skip the marker.
 
-(define _i (lambda (name fun) 
+(define _i (lambda (name fun)
              (_ name (cons '$Intrinsic fun))))
 
 (define Global-Env
@@ -266,18 +267,19 @@
                                    '()))))))))))))
 
 (set! Global-Env
-      (_ (_i 'car (lambda (x) (car (fst x))))
-         (_ (_i 'cdr (lambda (x) (cdr (fst x))))
-            (_ (_i 'cons (lambda (x) (cons (fst x) (snd x))))
-               (_ (_i 'eq? (lambda (x) (eq? (fst x) (snd x))))
-                  (_ (_i 'eqv? (lambda (x) (eqv? (fst x) (snd x))))
-                     (_ (_i 'pair? (lambda (x) (pair? (fst x))))
-                        (_ (_i 'null? (lambda (x) (null? (fst x))))
-                           (_ (_i 'not (lambda (x) (not (fst x))))
-                              (_ (_i 'list (lambda (x) x))
-                                 (_ (_ 'call/cc 'call/cc)
-                                    (_ (_ 'apply 'apply)
-                                       Global-Env))))))))))))
+      (_ (_ '() '())                    ; marker of the frame top
+         (_ (_i 'car (lambda (x) (car (fst x))))
+            (_ (_i 'cdr (lambda (x) (cdr (fst x))))
+               (_ (_i 'cons (lambda (x) (cons (fst x) (snd x))))
+                  (_ (_i 'eq? (lambda (x) (eq? (fst x) (snd x))))
+                     (_ (_i 'eqv? (lambda (x) (eqv? (fst x) (snd x))))
+                        (_ (_i 'pair? (lambda (x) (pair? (fst x))))
+                           (_ (_i 'null? (lambda (x) (null? (fst x))))
+                              (_ (_i 'not (lambda (x) (not (fst x))))
+                                 (_ (_i 'list (lambda (x) x))
+                                    (_ (_ 'call/cc 'call/cc)
+                                       (_ (_ 'apply 'apply)
+                                          Global-Env)))))))))))))
 
 ;; Evaluate an expression with an environment and a continuation.
 (define evaluate
@@ -342,15 +344,18 @@
              (if (eq? kar '$Continuation)
                  (kdr (fst arg))
                (if (eq? kar '$Closure)
-                   (eval-sequentially (snd kdr) ; body
-                                      (prepend-defs-to-env (fst kdr) ; params
-                                                           arg
-                                                           (trd kdr)) ; env
-                                      k)
+                   (eval-sequentially
+                    (snd kdr)           ; body
+                    (_ (_ '() '())      ; marker of the frame top
+                       (prepend-defs-to-env (fst kdr) ; params
+                                            arg
+                                            (trd kdr))) ; env
+                    k)
                  (display (list 'Unknown-fun fun arg))))))
          (car fun)
          (cdr fun))))))
 
+;; Evaluate each element of list sequentially to yield the last result.
 (define eval-sequentially
   (lambda (explist env k)
     (evaluate (car explist) env
@@ -358,6 +363,8 @@
                   k
                 (lambda (x) (eval-sequentially (cdr explist) env k))))))
 
+;; Evaluate each element of list to construct a new list of the results.
+;; (evlis '((* 1 2) (* 3 4)) Global-Env list) => (list '(2 12)) => ((2 12))
 (define evlis
   (lambda (arg env k)
     (if (null? arg)
@@ -368,11 +375,13 @@
                          (lambda (tail)
                            (k (cons head tail)))))))))
 
-;; x = env; (deinfe-var 'a 1 x) => None; x = (_ (_ a 1) env)
+;; env = (_ (_ '() '()) x); (deinfe-var 'a 1 env) => None;
+;; env = (_ (_ '() '()) (_ (_ a 1) x))
 (define define-var
   (lambda (v e env)
-    (env (cons 'cdr (_ (env 'car) (env 'cdr))))
-    (env (cons 'car (_ v e)))))
+    (if (null? ((env 'car) 'car))
+        (env (cons 'cdr (_ (_ v e) (env 'cdr))))
+      (display (list 'Illegal-env v e ((env 'car) 'car))))))
 
 ;; x = (_ a 1); (set-var x 2) => None; x = (_ a 2)
 (define set-var (lambda (pair e)
@@ -415,18 +424,16 @@
 
 ;; (read-eval-print-loop)
 (global-eval '(begin
-;; ----------------------------------------------------------------------
-;; A meta-circular little Scheme v0.3 H31.03.11 by SUZUKI Hisao
+;; A meta-circular little Scheme v1.0 H31.03.18 by SUZUKI Hisao
 
 ;; Intrinsic:    ($Intrinsic . function)
 ;; Continuation: ($Continuation . function)
 ;; Closure:      ($Closure params body env)
 
-;; (_ CAR CDR) returns a mutable cons-cell to construct an environment.
+;; (_ CAR CDR) returns a mutable cons-cell to construct environments.
 ;; (define x (_ 'a 'b))
 ;; (x 'car) => a
 ;; (x 'cdr) => b
-;; (x '(car . c)) => None; (x 'car) = c
 ;; (x '(cdr . c)) => None; (x 'cdr) = c
 (define _
   (lambda (CAR CDR)
@@ -435,11 +442,9 @@
           CAR
         (if (eq? op 'cdr)
             CDR
-          (if (eq? (car op) 'car)
-              (set! CAR (cdr op))
-            (if (eq? (car op) 'cdr)
-                (set! CDR (cdr op))
-              (display (list 'Unknown-op op CAR CDR)))))))))
+          (if (eq? (car op) 'cdr)
+              (set! CDR (cdr op))
+            (display (list 'Unknown-op op CAR CDR))))))))
 
 (define fst car)
 (define snd (lambda (x) (car (cdr x))))
@@ -455,9 +460,9 @@
                    (loop (env 'cdr)
                          (cons ((env 'car) 'car)
                                result)))))
-    (loop Global-Env '())))
+    (loop (Global-Env 'cdr) '())))      ; Take cdr to skip the marker.
 
-(define _i (lambda (name fun) 
+(define _i (lambda (name fun)
              (_ name (cons '$Intrinsic fun))))
 
 (define Global-Env
@@ -475,18 +480,19 @@
                                    '()))))))))))))
 
 (set! Global-Env
-      (_ (_i 'car (lambda (x) (car (fst x))))
-         (_ (_i 'cdr (lambda (x) (cdr (fst x))))
-            (_ (_i 'cons (lambda (x) (cons (fst x) (snd x))))
-               (_ (_i 'eq? (lambda (x) (eq? (fst x) (snd x))))
-                  (_ (_i 'eqv? (lambda (x) (eqv? (fst x) (snd x))))
-                     (_ (_i 'pair? (lambda (x) (pair? (fst x))))
-                        (_ (_i 'null? (lambda (x) (null? (fst x))))
-                           (_ (_i 'not (lambda (x) (not (fst x))))
-                              (_ (_i 'list (lambda (x) x))
-                                 (_ (_ 'call/cc 'call/cc)
-                                    (_ (_ 'apply 'apply)
-                                       Global-Env))))))))))))
+      (_ (_ '() '())                    ; marker of the frame top
+         (_ (_i 'car (lambda (x) (car (fst x))))
+            (_ (_i 'cdr (lambda (x) (cdr (fst x))))
+               (_ (_i 'cons (lambda (x) (cons (fst x) (snd x))))
+                  (_ (_i 'eq? (lambda (x) (eq? (fst x) (snd x))))
+                     (_ (_i 'eqv? (lambda (x) (eqv? (fst x) (snd x))))
+                        (_ (_i 'pair? (lambda (x) (pair? (fst x))))
+                           (_ (_i 'null? (lambda (x) (null? (fst x))))
+                              (_ (_i 'not (lambda (x) (not (fst x))))
+                                 (_ (_i 'list (lambda (x) x))
+                                    (_ (_ 'call/cc 'call/cc)
+                                       (_ (_ 'apply 'apply)
+                                          Global-Env)))))))))))))
 
 ;; Evaluate an expression with an environment and a continuation.
 (define evaluate
@@ -551,15 +557,18 @@
              (if (eq? kar '$Continuation)
                  (kdr (fst arg))
                (if (eq? kar '$Closure)
-                   (eval-sequentially (snd kdr) ; body
-                                      (prepend-defs-to-env (fst kdr) ; params
-                                                           arg
-                                                           (trd kdr)) ; env
-                                      k)
+                   (eval-sequentially
+                    (snd kdr)           ; body
+                    (_ (_ '() '())      ; marker of the frame top
+                       (prepend-defs-to-env (fst kdr) ; params
+                                            arg
+                                            (trd kdr))) ; env
+                    k)
                  (display (list 'Unknown-fun fun arg))))))
          (car fun)
          (cdr fun))))))
 
+;; Evaluate each element of list sequentially to yield the last result.
 (define eval-sequentially
   (lambda (explist env k)
     (evaluate (car explist) env
@@ -567,6 +576,8 @@
                   k
                 (lambda (x) (eval-sequentially (cdr explist) env k))))))
 
+;; Evaluate each element of list to construct a new list of the results.
+;; (evlis '((* 1 2) (* 3 4)) Global-Env list) => (list '(2 12)) => ((2 12))
 (define evlis
   (lambda (arg env k)
     (if (null? arg)
@@ -577,11 +588,13 @@
                          (lambda (tail)
                            (k (cons head tail)))))))))
 
-;; x = env; (deinfe-var 'a 1 x) => None; x = (_ (_ a 1) env)
+;; env = (_ (_ '() '()) x); (deinfe-var 'a 1 env) => None;
+;; env = (_ (_ '() '()) (_ (_ a 1) x))
 (define define-var
   (lambda (v e env)
-    (env (cons 'cdr (_ (env 'car) (env 'cdr))))
-    (env (cons 'car (_ v e)))))
+    (if (null? ((env 'car) 'car))
+        (env (cons 'cdr (_ (_ v e) (env 'cdr))))
+      (display (list 'Illegal-env v e ((env 'car) 'car))))))
 
 ;; x = (_ a 1); (set-var x 2) => None; x = (_ a 2)
 (define set-var (lambda (pair e)
@@ -623,7 +636,5 @@
      (read))))
 
 (read-eval-print-loop)
-;; ----------------------------------------------------------------------
 ))
-;; ----------------------------------------------------------------------
 ))
