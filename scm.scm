@@ -1,4 +1,4 @@
-;; A meta-circular little Scheme v1.1 H31.03.18/R01.07.18 by SUZUKI Hisao
+;; A meta-circular little Scheme v1.1 R01.07.20 by SUZUKI Hisao
 
 ;; Intrinsic:    ($Intrinsic . function)
 ;; Continuation: ($Continuation . function)
@@ -8,7 +8,7 @@
 (define snd (lambda (x) (car (cdr x))))
 (define trd (lambda (x) (car (cdr (cdr x)))))
 (define None (set! fst fst))
-(define exit-with #f)               ; This will be set at global-eval.
+(define exit-with #f)               ; to be set at global-eval
 
 (define _error
   (lambda (reason arg)
@@ -143,7 +143,7 @@
                    (if (eq? kar '$Closure)
                        (eval-sequentially
                         (snd kdr)       ; body
-                        (_ (_ '() '())  ; farme marker
+                        (_ (_ '() '())  ; frame marker
                            (prepend-defs-to-env (fst kdr) ; params
                                                 arg
                                                 (trd kdr))) ; env
