@@ -10,6 +10,7 @@ It implements the same language as
 - [little-scheme-in-dart](https://github.com/nukata/little-scheme-in-dart)
 - [little-scheme-in-java](https://github.com/nukata/little-scheme-in-java)
 - [little-scheme-in-cs](https://github.com/nukata/little-scheme-in-cs)
+- [little-scheme-in-typescript](https://github.com/nukata/little-scheme-in-typescript)
 
 and runs on them.
 It also runs on other Schemes such as
