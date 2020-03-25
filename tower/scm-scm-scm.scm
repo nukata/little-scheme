@@ -1,4 +1,4 @@
-;; A meta-circular little Scheme v1.1 R01.07.20 by SUZUKI Hisao
+;; A meta-circular little Scheme v1.2 R02.03.25 by SUZUKI Hisao
 
 ;; Intrinsic:    ($Intrinsic . function)
 ;; Continuation: ($Continuation . function)
@@ -16,20 +16,20 @@
     (newline)
     (exit-with None)))
 
-;; (_ CAR CDR) returns a mutable cell to construct environments.
+;; (_ CAR_ CDR_) returns a mutable cell to construct environments.
 ;; (define x (_ 'a 'b))
 ;; (x 'car) => a
 ;; (x 'cdr) => b
 ;; (x '(c)) => None; (x 'cdr) = c
 (define _
-  (lambda (CAR CDR)
+  (lambda (CAR_ CDR_)
     (lambda (op)
       (if (eq? op 'car)
-          CAR
+          CAR_
         (if (eq? op 'cdr)
-            CDR
+            CDR_
           (if (pair? op)
-              (set! CDR (car op))
+              (set! CDR_ (car op))
             (_error "unknown op" op)))))))
 
 ;; Return a list of keys of the global environment.
@@ -228,7 +228,7 @@
 
 ;; (read-eval-print-loop)
 (global-eval '(begin
-;; A meta-circular little Scheme v1.1 R01.07.20 by SUZUKI Hisao
+;; A meta-circular little Scheme v1.2 R02.03.25 by SUZUKI Hisao
 
 ;; Intrinsic:    ($Intrinsic . function)
 ;; Continuation: ($Continuation . function)
@@ -246,20 +246,20 @@
     (newline)
     (exit-with None)))
 
-;; (_ CAR CDR) returns a mutable cell to construct environments.
+;; (_ CAR_ CDR_) returns a mutable cell to construct environments.
 ;; (define x (_ 'a 'b))
 ;; (x 'car) => a
 ;; (x 'cdr) => b
 ;; (x '(c)) => None; (x 'cdr) = c
 (define _
-  (lambda (CAR CDR)
+  (lambda (CAR_ CDR_)
     (lambda (op)
       (if (eq? op 'car)
-          CAR
+          CAR_
         (if (eq? op 'cdr)
-            CDR
+            CDR_
           (if (pair? op)
-              (set! CDR (car op))
+              (set! CDR_ (car op))
             (_error "unknown op" op)))))))
 
 ;; Return a list of keys of the global environment.
@@ -458,7 +458,7 @@
 
 ;; (read-eval-print-loop)
 (global-eval '(begin
-;; A meta-circular little Scheme v1.1 R01.07.20 by SUZUKI Hisao
+;; A meta-circular little Scheme v1.2 R02.03.25 by SUZUKI Hisao
 
 ;; Intrinsic:    ($Intrinsic . function)
 ;; Continuation: ($Continuation . function)
@@ -476,20 +476,20 @@
     (newline)
     (exit-with None)))
 
-;; (_ CAR CDR) returns a mutable cell to construct environments.
+;; (_ CAR_ CDR_) returns a mutable cell to construct environments.
 ;; (define x (_ 'a 'b))
 ;; (x 'car) => a
 ;; (x 'cdr) => b
 ;; (x '(c)) => None; (x 'cdr) = c
 (define _
-  (lambda (CAR CDR)
+  (lambda (CAR_ CDR_)
     (lambda (op)
       (if (eq? op 'car)
-          CAR
+          CAR_
         (if (eq? op 'cdr)
-            CDR
+            CDR_
           (if (pair? op)
-              (set! CDR (car op))
+              (set! CDR_ (car op))
             (_error "unknown op" op)))))))
 
 ;; Return a list of keys of the global environment.
