@@ -10,6 +10,7 @@ It implements the same language as
 - [little-scheme-in-dart](https://github.com/nukata/little-scheme-in-dart)
 - [little-scheme-in-go](https://github.com/nukata/little-scheme-in-go)
 - [little-scheme-in-java](https://github.com/nukata/little-scheme-in-java)
+- [little-scheme-in-kotlin](https://github.com/nukata/little-scheme-in-kotlin)
 - [little-scheme-in-lisp](https://github.com/nukata/little-scheme-in-lisp)
 - [little-scheme-in-php](https://github.com/nukata/little-scheme-in-php)
 - [little-scheme-in-python](https://github.com/nukata/little-scheme-in-python)
@@ -42,8 +43,8 @@ $ little-scheme-in-go scm.scm
 +
 => ($Intrinsic . #<(x):((+ (fst x) (snd x))):#<GlobalEnv>>)
 (globals)
-=> (globals = < * - + symbol? eof-object? read newline display error apply call/
-cc list not null? pair? eqv? eq? cons cdr car)
+=> (globals error number? = < * - + apply call/cc symbol? eof-object? read newline display list not 
+null? pair? eq? cons cdr car)
 ```
 
 Press EOF (e.g. Control-D) to exit the session.
@@ -76,16 +77,16 @@ For simplicity, this Scheme treats (`define` _v_ _e_) as an expression type.
 
 ### Built-in procedures
 
-|                      |                          |                     |
-|:---------------------|:-------------------------|:--------------------|
-| (`car` _lst_)        | (`not` _x_)              | (`eof-object?` _x_) |
-| (`cdr` _lst_)        | (`list` _x_ ...)         | (`symbol?` _x_)     |
-| (`cons` _x_ _y_)     | (`call/cc` _fun_)        | (`+` _x_ _y_)       |
-| (`eq?` _x_ _y_)      | (`apply` _fun_ _arg_)    | (`-` _x_ _y_)       |
-| (`eqv?` _x_ _y_)     | (`display` _x_)          | (`*` _x_ _y_)       |
-| (`pair?` _x_)        | (`newline`)              | (`<` _x_ _y_)       |
-| (`null?` _x_)        | (`read`)                 | (`=` _x_ _y_)       |
-|                      | (`error` _reason_ _arg_) | (`globals`)         |
+|                   |                          |                 |
+|:------------------|:-------------------------|:----------------|
+| (`car` _lst_)     | (`display` _x_)          | (`+` _n1_ _n2_) |
+| (`cdr` _lst_)     | (`newline`)              | (`-` _n1_ _n2_) |
+| (`cons` _x_ _y_)  | (`read`)                 | (`*` _n1_ _n2_) |
+| (`eq?` _x_ _y_)   | (`eof-object?` _x_)      | (`<` _n1_ _n2_) |
+| (`pair?` _x_)     | (`symbol?` _x_)          | (`=` _n1_ _n2_) |
+| (`null?` _x_)     | (`call/cc` _fun_)        | (`number?` _x_) |
+| (`not` _x_)       | (`apply` _fun_ _arg_)    | (`globals`)     |
+| (`list` _x_ ...)  | (`error` _reason_ _arg_) |                 |
 
 - `(error` _reason_ _arg_`)` displays `Error:` _reason_`:` _arg_ and
   goes back to the top level.
@@ -94,11 +95,11 @@ For simplicity, this Scheme treats (`define` _v_ _e_) as an expression type.
 - `(globals)` returns a list of keys of the global environment.
   It is not in the standard.
 
-See [`Global-Env`](scm.scm#L50-L78)
+See [`Global-Env`](scm.scm#L50-L81)
 in `scm.scm` for the implementation of the procedures
 except `call/cc` and `apply`.  
 `call/cc` and `apply` are implemented particularly at 
-[`apply-fun`](scm.scm#L130-L154) in `scm.scm`.
+[`apply-fun`](scm.scm#L133-L157) in `scm.scm`.
 
 
 <a name="examples"></a>
@@ -130,7 +131,7 @@ $ guile scm.scm < examples/dynamic-wind-example.scm
 (connect talk1 disconnect connect talk2 disconnect)
 $ guile scm.scm < examples/amb.scm
 ((1 A) (1 B) (1 C) (2 A) (2 B) (2 C) (3 A) (3 B) (3 C))
-$ guile scm.scm < examples/yin-yang-puzzle.scm
+$ guile scm.scm < examples/yin-yang-puzzle.scm | head
 
 *
 **
@@ -141,9 +142,8 @@ $ guile scm.scm < examples/yin-yang-puzzle.scm
 *******
 ********
 *********
+$ 
 ```
-
-Press the interrupt key (e.g. Control-C) to stop the yin-yang puzzle.
 
 
 <a name="performance"></a>
@@ -153,24 +153,25 @@ The following table shows the times to run [`scm.scm`](scm.scm) `<` [`examples/n
 I used MacBook Pro (15-inch, 2016), 2.6GHz Core i7, 16GB 2133MHz LPDDR3, macOS Mojave 10.14.6.
 
 | Scheme                                                                                     | Compiled/Executed on                                  | Time [sec] | Rel. Speed |
-|:-------------------------------------------------------------------------------------------|:------------------------------------------------------|-----------:|-----------:| 
-| GNU Guile                                                                            2.2.7 | `guile`                                               |    0.14    |   14.8     |
-| [little-scheme-in-go](https://github.com/nukata/little-scheme-in-go)                 1.1.1 | Go 1.14: `go build`                                   |    2.07    |    1.00    |
-| [little-scheme-in-java](https://github.com/nukata/little-scheme-in-java)             1.0.0 | AdoptOpenJDK jdk-11.0.6+10: `make`                    |    2.09    |    0.99    |
-| [little-scheme-in-crystal](https://github.com/nukata/little-scheme-in-crystal)       0.1.0 | Crystal 0.33.0: `crystal build --release scm.cr`      |    2.26    |    0.92    |
-| [little-scheme-in-lisp](https://github.com/nukata/little-scheme-in-lispl)            0.3.0 | SBCL 2.0.2: `sbcl --script scm.l`                     |    2.51    |    0.82    |
-| [little-scheme-in-cs](https://github.com/nukata/little-scheme-in-cs)                 1.0.2 | .NET Core 3.1.2: `dotnet build -c Release`            |    4.40    |    0.47    |
-| [little-scheme-in-python](https://github.com/nukata/little-scheme-in-python)         3.1.0 | PyPy 7.3.0 (Python 2.7.13): `pypy scm.py`             |    5.04    |    0.41    |
-| [little-scheme-in-cs](https://github.com/nukata/little-scheme-in-cs)                 1.0.2 | Mono 6.8.0: `csc -o -r:System.Numerics.dll *.cs`      |    5.44    |    0.38    |
-| [little-scheme-in-python](https://github.com/nukata/little-scheme-in-python)         3.1.0 | PyPy 7.3.0 (Python 3.6.9): `pypy3 scm.py`             |    5.48    |    0.38    |
-| [little-scheme-in-typescript](https://github.com/nukata/little-scheme-in-typescript) 1.1.1 | TypeScript 3.8.3/Node.js 13.11.0: `tsc -t ESNext ...` |   10.16    |    0.20    |
-| [little-scheme-in-crystal](https://github.com/nukata/little-scheme-in-crystal)       0.1.0 | Crystal 0.33.0: `crystal scm.cr`                      |   10.94    |    0.19    |
-| [little-scheme-in-dart](https://github.com/nukata/little-scheme-in-dart)             0.3.0 | Dart 2.7.1: `dart scm.dart`                           |   13.68    |    0.15    |
-| [little-scheme-in-dart](https://github.com/nukata/little-scheme-in-dart)             0.3.0 | Dart 2.7.1: `dart2native scm.dart`; `./scm.exe`       |   14.20    |    0.15    |
-| [little-scheme-in-php](https://github.com/nukata/little-scheme-in-php)               0.2.0 | PHP 7.1.33: `php scm.php`                             |   59.27    |    0.03    |
-| [little-scheme-in-python](https://github.com/nukata/little-scheme-in-python)         3.1.0 | Python 3.7.7: `python3 scm.py`                        |   83.71    |    0.02    |
-| [little-scheme-in-ruby](https://github.com/nukata/little-scheme-in-ruby)             0.2.1 | Ruby 2.3.7: `ruby scm.rb`                             |   85.95    |    0.02    |
-| [little-scheme-in-python](https://github.com/nukata/little-scheme-in-python)         3.1.0 | Python 2.7.16: `python scm.py`                        |   92.02    |    0.02    |
+|:-------------------------------------------------------------------------------------------|:------------------------------------------------------|-----------:|-----------:|
+| GNU Guile                                                                            2.2.7 | `guile`                                               |    0.13    |   14.4     |
+| [little-scheme-in-cs](https://github.com/nukata/little-scheme-in-cs)                 1.1.0 | .NET Core 3.1.2: `dotnet build -c Release`            |    1.87    |    1.00    |
+| [little-scheme-in-go](https://github.com/nukata/little-scheme-in-go)                 1.2.0 | Go 1.14.2: `go build`                                 |    2.00    |    0.94    |
+| [little-scheme-in-java](https://github.com/nukata/little-scheme-in-java)             1.1.0 | AdoptOpenJDK jdk-11.0.6+10                            |    2.02    |    0.93    |
+| [little-scheme-in-crystal](https://github.com/nukata/little-scheme-in-crystal)       0.2.0 | Crystal 0.34.0: `crystal build --release scm.cr`      |    2.15    |    0.87    |
+| [little-scheme-in-lisp](https://github.com/nukata/little-scheme-in-lisp)             0.4.0 | SBCL 2.0.2: `sbcl --script scm.l`                     |    2.38    |    0.79    |
+| [little-scheme-in-kotlin](https://github.com/nukata/little-scheme-in-kotlin)         0.2.0 | Kotlin 1.3.71/AdoptOpenJDK jdk-11.0.6+10              |    2.38    |    0.79    |
+| [little-scheme-in-cs](https://github.com/nukata/little-scheme-in-cs)                 1.1.0 | Mono 6.8.0: `csc -o -r:System.Numerics.dll *.cs`      |    2.77    |    0.68    |
+| [little-scheme-in-dart](https://github.com/nukata/little-scheme-in-dart)             0.4.0 | Dart 2.7.2: `dart scm.dart`                           |    3.71    |    0.50    |
+| [little-scheme-in-dart](https://github.com/nukata/little-scheme-in-dart)             0.4.0 | Dart 2.7.2: `dart2native scm.dart`; `./scm.exe`       |    3.72    |    0.50    |
+| [little-scheme-in-python](https://github.com/nukata/little-scheme-in-python)         3.2.0 | PyPy 7.3.0 (Python 2.7.13): `pypy scm.py`             |    4.73    |    0.40    |
+| [little-scheme-in-python](https://github.com/nukata/little-scheme-in-python)         3.2.0 | PyPy 7.3.0 (Python 3.6.9): `pypy3 scm.py`             |    5.19    |    0.36    |
+| [little-scheme-in-typescript](https://github.com/nukata/little-scheme-in-typescript) 1.2.1 | TypeScript 3.8.3/Node.js 13.12.0: `tsc -t ESNext ...` |    7.17    |    0.26    |
+| [little-scheme-in-crystal](https://github.com/nukata/little-scheme-in-crystal)       0.2.0 | Crystal 0.34.0: `crystal scm.cr`                      |    9.88    |    0.19    |
+| [little-scheme-in-php](https://github.com/nukata/little-scheme-in-php)               0.3.0 | PHP 7.1.33: `php scm.php`                             |   44.84    |    0.04    |
+| [little-scheme-in-python](https://github.com/nukata/little-scheme-in-python)         3.2.0 | Python 3.8.2: `python3 scm.py`                        |   81.72    |    0.02    |
+| [little-scheme-in-ruby](https://github.com/nukata/little-scheme-in-ruby)             0.3.0 | Ruby 2.3.7: `ruby scm.rb`                             |   84.80    |    0.02    |
+| [little-scheme-in-python](https://github.com/nukata/little-scheme-in-python)         3.2.0 | Python 2.7.16: `python scm.py`                        |   88.78    |    0.02    |
 
 
 <a name="tower"></a>
@@ -199,7 +200,7 @@ Being meta-circular, this interpreter is able to run itself recursively.
 ```Scheme
 ;; (read-eval-print-loop)
 (global-eval '(begin
-;; A meta-circular little Scheme v1.2 R02.03.25 by SUZUKI Hisao
+;; A meta-circular little Scheme v1.3 R02.04.12 by SUZUKI Hisao
 ...
 (read-eval-print-loop)
 ))
@@ -215,9 +216,9 @@ $ little-scheme-in-go tower/scm-scm.scm
 (+ 5 6)
 => 11
 +
-=> ($Intrinsic $Closure (x) ((+ (fst x) (snd x))) #<(op):((if (eq? op (quote car
-)) CAR (if (eq? op (quote cdr)) CDR (if (pair? op) (set! CDR (car op)) (_error "
-unknown op" op))))):#<| CAR CDR GlobalEnv>>)
+=> ($Intrinsic $Closure (x) ((+ (fst x) (snd x))) #<(op):((if (eq? op (quote car)) CAR_ (if (eq? op 
+(quote cdr)) CDR_ (if (pair? op) (set! CDR_ (car op)) (_error "unknown op" op))))):#<| CAR_ CDR_ Glo
+balEnv>>)
 ```
 
 Note that the _intrinsic_ function `+` is now implemented by a _closure_
@@ -228,30 +229,42 @@ Try [`tower/scm-scm-scm.scm`](tower/scm-scm-scm.scm) and you will find it runs
 prohibitively _slowly_ as might be expected.
 
 ```
-$ time little-scheme-in-go example/fib90.scm
-2880067194370816120
+$ time ./little-scheme-in-go examples/yin-yang-puzzle.scm | head -4
 
-real	0m0.006s
-user	0m0.003s
-sys	0m0.003s
-$ time little-scheme-in-go scm.scm < example/fib90.scm
-2880067194370816120
+*
+**
+***
 
-real	0m0.042s
-user	0m0.038s
-sys	0m0.007s
-$ time little-scheme-in-go tower/scm-scm.scm < examples/fib90.scm
-2880067194370816120
+real	0m0.007s
+user	0m0.004s
+sys	0m0.005s
+$ time ./little-scheme-in-go scm.scm < examples/yin-yang-puzzle.scm | head -4
 
-real	0m7.679s
-user	0m8.750s
-sys	0m0.288s
-$ time little-scheme-in-go tower/scm-scm-scm.scm < examples/fib90.scm
-2880067194370816120
+*
+**
+***
 
-real	41m2.781s
-user	57m51.862s
-sys	1m50.150s
+real	0m0.010s
+user	0m0.006s
+sys	0m0.005s
+$ time ./little-scheme-in-go tower/scm-scm.scm < examples/yin-yang-puzzle.scm | head -4
+
+*
+**
+***
+
+real	0m0.386s
+user	0m0.434s
+sys	0m0.026s
+$ time ./little-scheme-in-go tower/scm-scm-scm.scm < examples/yin-yang-puzzle.scm | head -4
+
+*
+**
+***
+
+real	1m46.486s
+user	2m33.903s
+sys	0m5.011s
 $ 
 ```
 
@@ -263,14 +276,11 @@ The following table shows the times to run [`tower/scm-scm.scm`](tower/scm-scm.s
 I used the same MacBook Pro as above.
 
 | Scheme                                                                                     | Compiled/Executed on                                  | Time [sec] | Rel. Speed |
-|:-------------------------------------------------------------------------------------------|:------------------------------------------------------|-----------:|-----------:| 
-| GNU Guile                                                                            2.2.7 | `guile`                                               |    28.38   |   22.2     |
-| [little-scheme-in-java](https://github.com/nukata/little-scheme-in-java)             1.0.0 | AdoptOpenJDK jdk-11.0.6+10: `make`                    |   532.64   |    1.19    |
-| [little-scheme-in-go](https://github.com/nukata/little-scheme-in-go)                 1.1.1 | Go 1.14: `go build`                                   |   631.35   |    1.00    |
-| [little-scheme-in-crystal](https://github.com/nukata/little-scheme-in-crystal)       0.1.0 | Crystal 0.33.0: `crystal build --release scm.cr`      |   664.93   |    0.95    |
-| [little-scheme-in-lisp](https://github.com/nukata/little-scheme-in-lispl)            0.3.0 | SBCL 2.0.2: `sbcl --script scm.l`                     |   715.89   |    0.88    |
-| [little-scheme-in-cs](https://github.com/nukata/little-scheme-in-cs)                 1.0.2 | .NET Core 3.1.2: `dotnet build -c Release`            |  1308.03   |    0.48    |
-| [little-scheme-in-python](https://github.com/nukata/little-scheme-in-python)         3.1.0 | PyPy 7.3.0 (Python 2.7.13): `pypy scm.py`             |  1360.67   |    0.46    |
-| [little-scheme-in-typescript](https://github.com/nukata/little-scheme-in-typescript) 1.1.1 | TypeScript 3.8.3/Node.js 13.11.0: `tsc -t ESNext ...` |  2953.61   |    0.21    |
-| [little-scheme-in-dart](https://github.com/nukata/little-scheme-in-dart)             0.3.0 | Dart 2.7.1: `dart scm.dart`                           |  3786.97   |    0.17    |
-| [little-scheme-in-php](https://github.com/nukata/little-scheme-in-php)               0.2.0 | PHP 7.1.33: `php scm.php`                             | 18028.97   |    0.04    |
+|:-------------------------------------------------------------------------------------------|:------------------------------------------------------|-----------:|-----------:|
+| GNU Guile                                                                            2.2.7 | `guile`                                               |    27.32   |   18.5     |
+| [little-scheme-in-cs](https://github.com/nukata/little-scheme-in-cs)                 1.1.0 | .NET Core 3.1.2: `dotnet build -c Release`            |   506.15   |    1.00    |
+| [little-scheme-in-java](https://github.com/nukata/little-scheme-in-java)             1.1.0 | AdoptOpenJDK jdk-11.0.6+10                            |   506.79   |    1.00    |
+| [little-scheme-in-kotlin](https://github.com/nukata/little-scheme-in-kotlin)         0.2.0 | Kotlin 1.3.71/AdoptOpenJDK jdk-11.0.6+10              |   598.57   |    0.85    |
+| [little-scheme-in-go](https://github.com/nukata/little-scheme-in-go)                 1.2.0 | Go 1.14.2: `go build`                                 |   604.27   |    0.84    |
+| [little-scheme-in-crystal](https://github.com/nukata/little-scheme-in-crystal)       0.2.0 | Crystal 0.34.0: `crystal build --release scm.cr`      |   624.52   |    0.81    |
+| [little-scheme-in-lisp](https://github.com/nukata/little-scheme-in-lisp)             0.4.0 | SBCL 2.0.2: `sbcl --script scm.l`                     |   676.82   |    0.75    |

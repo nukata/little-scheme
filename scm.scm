@@ -1,4 +1,4 @@
-;; A meta-circular little Scheme v1.2 R02.03.25 by SUZUKI Hisao
+;; A meta-circular little Scheme v1.3 R02.04.12 by SUZUKI Hisao
 
 ;; Intrinsic:    ($Intrinsic . function)
 ;; Continuation: ($Continuation . function)
@@ -48,19 +48,25 @@
     (_ name (cons '$Intrinsic fun))))
 
 (define Global-Env
-  (_ (_i 'error (lambda (x) (_error (fst x) (snd x)))) ; cf. SRFI-23
-     (_ (_i 'display (lambda (x) (display (fst x))))
-        (_ (_i 'newline (lambda (x) (newline)))
-           (_ (_i 'read (lambda (x) (read)))
-              (_ (_i 'eof-object? (lambda (x) (eof-object? (fst x))))
-                 (_ (_i 'symbol? (lambda (x) (symbol? (fst x))))
-                    (_ (_i '+ (lambda (x) (+ (fst x) (snd x))))
-                       (_ (_i '- (lambda (x) (- (fst x) (snd x))))
-                          (_ (_i '* (lambda (x) (* (fst x) (snd x))))
-                             (_ (_i '< (lambda (x) (< (fst x) (snd x))))
-                                (_ (_i '= (lambda (x) (= (fst x) (snd x))))
-                                   (_ (_i 'globals globals)
-                                      '())))))))))))))
+  (_ (_i '< (lambda (x) (< (fst x) (snd x))))
+     (_ (_i '= (lambda (x) (= (fst x) (snd x))))
+        (_ (_i 'number? (lambda (x) (number? (fst x))))
+           (_ (_i 'error (lambda (x) (_error (fst x) (snd x)))) ; cf. SRFI-23
+              (_ (_i 'globals globals)
+                 '()))))))
+
+(set! Global-Env
+      (_ (_i 'display (lambda (x) (display (fst x))))
+         (_ (_i 'newline (lambda (x) (newline)))
+            (_ (_i 'read (lambda (x) (read)))
+               (_ (_i 'eof-object? (lambda (x) (eof-object? (fst x))))
+                  (_ (_i 'symbol? (lambda (x) (symbol? (fst x))))
+                     (_ (_ 'call/cc 'call/cc)
+                        (_ (_ 'apply 'apply)
+                           (_ (_i '+ (lambda (x) (+ (fst x) (snd x))))
+                              (_ (_i '- (lambda (x) (- (fst x) (snd x))))
+                                 (_ (_i '* (lambda (x) (* (fst x) (snd x))))
+                                    Global-Env)))))))))))
 
 (set! Global-Env
       (_ (_ '() '())                    ; frame marker
@@ -68,14 +74,11 @@
             (_ (_i 'cdr (lambda (x) (cdr (fst x))))
                (_ (_i 'cons (lambda (x) (cons (fst x) (snd x))))
                   (_ (_i 'eq? (lambda (x) (eq? (fst x) (snd x))))
-                     (_ (_i 'eqv? (lambda (x) (eqv? (fst x) (snd x))))
-                        (_ (_i 'pair? (lambda (x) (pair? (fst x))))
-                           (_ (_i 'null? (lambda (x) (null? (fst x))))
-                              (_ (_i 'not (lambda (x) (not (fst x))))
-                                 (_ (_i 'list (lambda (x) x))
-                                    (_ (_ 'call/cc 'call/cc)
-                                       (_ (_ 'apply 'apply)
-                                          Global-Env)))))))))))))
+                     (_ (_i 'pair? (lambda (x) (pair? (fst x))))
+                        (_ (_i 'null? (lambda (x) (null? (fst x))))
+                           (_ (_i 'not (lambda (x) (not (fst x))))
+                              (_ (_i 'list (lambda (x) x))
+                                 Global-Env))))))))))
 
 ;; Evaluate an expression with an environment and a continuation.
 (define evaluate
